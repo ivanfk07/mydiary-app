@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_diary/db/note_database.dart';
+import 'package:my_diary/db/note_database.dart'; // Update import to NoteService
 import 'package:my_diary/models/note.dart';
 
 class AddNoteScreen extends StatefulWidget {
@@ -13,14 +13,15 @@ class AddNoteScreen extends StatefulWidget {
 class _AddNoteScreenState extends State<AddNoteScreen> {
   final _title = TextEditingController();
   final _description = TextEditingController();
+  final NoteService _noteService = NoteService(); // Use NoteService instance
 
   @override
   void initState() {
+    super.initState();
     if (widget.note != null) {
       _title.text = widget.note!.title;
       _description.text = widget.note!.description;
     }
-    super.initState();
   }
 
   @override
@@ -29,33 +30,37 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
       appBar: AppBar(
         title: const Text('Add Note'),
         actions: [
-          widget.note != null? IconButton(
-            onPressed: () {
-              showDialog(context: context, builder: (context) => AlertDialog(
-                content: const Text('Delete note?'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('No'),
+          if (widget.note != null)
+            IconButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    content: const Text('Delete note?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: const Text('No'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _deleteNote();
+                        },
+                        child: const Text('Yes'),
+                      )
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _deletNote();
-                    },
-                    child: const Text('Yes'),
-                  )
-                ],
-              ));
-            },
-            icon: Icon(Icons.delete_outline),
-          ): const SizedBox(),
+                );
+              },
+              icon: const Icon(Icons.delete_outline),
+            ),
           IconButton(
-            onPressed: widget.note == null? _insertNote: _updateNote,
+            onPressed: widget.note == null ? _insertNote : _updateNote,
             icon: const Icon(Icons.done),
-          )
+          ),
         ],
       ),
       body: Padding(
@@ -66,7 +71,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
               controller: _title,
               decoration: InputDecoration(
                 hintText: 'Title',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 15),
@@ -75,7 +80,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                 controller: _description,
                 decoration: InputDecoration(
                   hintText: 'Description',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 maxLines: 50,
               ),
@@ -86,28 +91,31 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     );
   }
 
-  _insertNote() async {
+  Future<void> _insertNote() async {
     final note = Note(
-      title: _title.text, 
-      description: _description.text, 
-      createdAt: DateTime.now()
+      title: _title.text,
+      description: _description.text,
+      createdAt: DateTime.now(),
     );
-    await NoteDatabase.insert(note: note);
+    await _noteService.insert(note: note);
+    Navigator.pop(context); // Close the screen after saving
   }
 
-  _updateNote() async {
+  Future<void> _updateNote() async {
     final note = Note(
       id: widget.note!.id!,
       title: _title.text,
       description: _description.text,
-      createdAt: widget.note!.createdAt
+      createdAt: widget.note!.createdAt,
     );
-    await NoteDatabase.update(note: note);
+    await _noteService.update(note: note);
+    Navigator.pop(context); // Close the screen after updating
   }
 
-  _deletNote() async {
-    NoteDatabase.delete(note: widget.note!).then((e) {
-      Navigator.pop(context);
-    });
+  Future<void> _deleteNote() async {
+    if (widget.note != null) {
+      await _noteService.delete(note: widget.note!);
+      Navigator.pop(context); // Close the screen after deleting
+    }
   }
 }
